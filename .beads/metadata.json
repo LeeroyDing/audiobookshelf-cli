@@ -1,0 +1,7 @@
+{
+  "database": "dolt",
+  "backend": "dolt",
+  "dolt_mode": "embedded",
+  "dolt_database": "audiobookshelf_cli",
+  "project_id": "b857939c-2219-4004-8de9-3733cd3877d5"
+}
