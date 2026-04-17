@@ -100,6 +100,74 @@ pub enum ItemCommands {
         /// The ID of the item
         item_id: String,
     },
+    /// Update metadata for a specific item
+    Update {
+        /// The ID of the item
+        item_id: String,
+        /// Update the title
+        #[arg(long)]
+        title: Option<String>,
+        /// Update the subtitle
+        #[arg(long)]
+        subtitle: Option<String>,
+        /// Update the author(s) (comma separated)
+        #[arg(long)]
+        author: Option<String>,
+        /// Update the narrator(s) (comma separated)
+        #[arg(long)]
+        narrator: Option<String>,
+        /// Update the series name
+        #[arg(long)]
+        series: Option<String>,
+        /// Update the genres (comma separated)
+        #[arg(long)]
+        genres: Option<String>,
+        /// Update the tags (comma separated)
+        #[arg(long)]
+        tags: Option<String>,
+        /// Update the published year
+        #[arg(long)]
+        year: Option<i32>,
+    },
+    /// Quick match an item against metadata providers
+    Match {
+        /// The ID of the item to match
+        item_id: String,
+    },
+    /// Remove the metadata match from an item
+    Unmatch {
+        /// The ID of the item to unmatch
+        item_id: String,
+    },
+    /// Update metadata for multiple items at once
+    BulkUpdate {
+        /// The IDs of the items (comma separated)
+        ids: String,
+        /// Update the title
+        #[arg(long)]
+        title: Option<String>,
+        /// Update the subtitle
+        #[arg(long)]
+        subtitle: Option<String>,
+        /// Update the author(s) (comma separated)
+        #[arg(long)]
+        author: Option<String>,
+        /// Update the narrator(s) (comma separated)
+        #[arg(long)]
+        narrator: Option<String>,
+        /// Update the series name
+        #[arg(long)]
+        series: Option<String>,
+        /// Update the genres (comma separated)
+        #[arg(long)]
+        genres: Option<String>,
+        /// Update the tags (comma separated)
+        #[arg(long)]
+        tags: Option<String>,
+        /// Update the published year
+        #[arg(long)]
+        year: Option<i32>,
+    },
 }
 
 #[derive(Subcommand)]
@@ -259,6 +327,98 @@ pub async fn handle_command(cli: Cli, client: AbsClient) -> Result<()> {
             ItemCommands::Get { item_id } => {
                 let item = client.get_item(&item_id).await?;
                 println!("{}", serde_json::to_string_pretty(&item)?);
+            }
+            ItemCommands::Update { 
+                item_id, 
+                title, 
+                subtitle, 
+                author, 
+                narrator, 
+                series, 
+                genres, 
+                tags, 
+                year 
+            } => {
+                let mut meta = serde_json::Map::new();
+                if let Some(t) = title { meta.insert("title".to_string(), serde_json::Value::String(t)); }
+                if let Some(s) = subtitle { meta.insert("subtitle".to_string(), serde_json::Value::String(s)); }
+                if let Some(a) = author { meta.insert("authorName".to_string(), serde_json::Value::String(a)); } // Note: ABS uses authorName for simple updates usually
+                if let Some(n) = narrator { meta.insert("narratorName".to_string(), serde_json::Value::String(n)); }
+                if let Some(s) = series { meta.insert("seriesName".to_string(), serde_json::Value::String(s)); }
+                if let Some(y) = year { meta.insert("publishedYear".to_string(), serde_json::Value::Number(y.into())); }
+                
+                if let Some(g_str) = genres {
+                    let g_list: Vec<serde_json::Value> = g_str.split(',').map(|s| serde_json::Value::String(s.trim().to_string())).collect();
+                    meta.insert("genres".to_string(), serde_json::Value::Array(g_list));
+                }
+                
+                if let Some(t_str) = tags {
+                    let t_list: Vec<serde_json::Value> = t_str.split(',').map(|s| serde_json::Value::String(s.trim().to_string())).collect();
+                    meta.insert("tags".to_string(), serde_json::Value::Array(t_list));
+                }
+
+                if meta.is_empty() {
+                    anyhow::bail!("No metadata fields provided for update.");
+                }
+
+                println!("Updating metadata for item {}...", item_id);
+                let result = client.update_item_metadata(&item_id, serde_json::Value::Object(meta)).await?;
+                println!("Item updated successfully!");
+                if cli.json {
+                    println!("{}", serde_json::to_string_pretty(&result)?);
+                }
+            }
+            ItemCommands::Match { item_id } => {
+                println!("Matching item {}...", item_id);
+                client.match_item(&item_id).await?;
+                println!("Matching triggered successfully!");
+            }
+            ItemCommands::Unmatch { item_id } => {
+                println!("Unmatching item {}...", item_id);
+                client.unmatch_item(&item_id).await?;
+                println!("Item unmatched successfully!");
+            }
+            ItemCommands::BulkUpdate { 
+                ids, 
+                title, 
+                subtitle, 
+                author, 
+                narrator, 
+                series, 
+                genres, 
+                tags, 
+                year 
+            } => {
+                let id_list: Vec<String> = ids.split(',').map(|s| s.trim().to_string()).collect();
+                
+                let mut meta = serde_json::Map::new();
+                if let Some(t) = title { meta.insert("title".to_string(), serde_json::Value::String(t)); }
+                if let Some(s) = subtitle { meta.insert("subtitle".to_string(), serde_json::Value::String(s)); }
+                if let Some(a) = author { meta.insert("authorName".to_string(), serde_json::Value::String(a)); }
+                if let Some(n) = narrator { meta.insert("narratorName".to_string(), serde_json::Value::String(n)); }
+                if let Some(s) = series { meta.insert("seriesName".to_string(), serde_json::Value::String(s)); }
+                if let Some(y) = year { meta.insert("publishedYear".to_string(), serde_json::Value::Number(y.into())); }
+                
+                if let Some(g_str) = genres {
+                    let g_list: Vec<serde_json::Value> = g_str.split(',').map(|s| serde_json::Value::String(s.trim().to_string())).collect();
+                    meta.insert("genres".to_string(), serde_json::Value::Array(g_list));
+                }
+                
+                if let Some(t_str) = tags {
+                    let t_list: Vec<serde_json::Value> = t_str.split(',').map(|s| serde_json::Value::String(s.trim().to_string())).collect();
+                    meta.insert("tags".to_string(), serde_json::Value::Array(t_list));
+                }
+
+                if meta.is_empty() {
+                    anyhow::bail!("No metadata fields provided for update.");
+                }
+
+                println!("Performing bulk update for {} items...", id_list.len());
+                let result = client.batch_update_items(&id_list, serde_json::Value::Object(meta)).await?;
+                println!("Bulk update completed successfully!");
+                if cli.json {
+                    println!("{}", serde_json::to_string_pretty(&result)?);
+                }
             }
         },
         Commands::Authors { cmd } => match cmd {

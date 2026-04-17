@@ -203,6 +203,44 @@ impl AbsClient {
 
         Ok(serde_json::Value::Object(aggregated))
     }
+
+    pub async fn update_item_metadata(&self, id: &str, metadata: serde_json::Value) -> Result<serde_json::Value> {
+        let url = format!("/api/items/{}/media", id);
+        let resp = self.request(Method::PATCH, &url)
+            .json(&serde_json::json!({ "metadata": metadata }))
+            .send()
+            .await?;
+        self.handle_response(resp, &format!("updating metadata for item {}", id)).await
+    }
+
+    pub async fn match_item(&self, id: &str) -> Result<serde_json::Value> {
+        let url = format!("/api/items/{}/match", id);
+        let resp = self.request(Method::POST, &url).send().await?;
+        self.handle_response(resp, &format!("matching item {}", id)).await
+    }
+
+    pub async fn unmatch_item(&self, id: &str) -> Result<serde_json::Value> {
+        let url = format!("/api/items/{}/match", id);
+        let resp = self.request(Method::DELETE, &url).send().await?;
+        self.handle_response(resp, &format!("unmatching item {}", id)).await
+    }
+
+    pub async fn batch_update_items(&self, ids: &[String], metadata: serde_json::Value) -> Result<serde_json::Value> {
+        let payload: Vec<serde_json::Value> = ids.iter().map(|id| {
+            serde_json::json!({
+                "id": id,
+                "mediaPayload": {
+                    "metadata": metadata
+                }
+            })
+        }).collect();
+
+        let resp = self.request(Method::POST, "/api/items/batch/update")
+            .json(&payload)
+            .send()
+            .await?;
+        self.handle_response(resp, "performing batch update").await
+    }
 }
 
 #[cfg(test)]
