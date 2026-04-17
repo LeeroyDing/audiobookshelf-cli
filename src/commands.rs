@@ -5,6 +5,10 @@ use clap::{Parser, Subcommand};
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
 pub struct Cli {
+    /// Output raw JSON instead of tables
+    #[arg(short, long, global = true)]
+    pub json: bool,
+
     #[command(subcommand)]
     pub command: Commands,
 }
@@ -135,6 +139,8 @@ pub enum MetadataCommands {
     Genres,
 }
 
+use comfy_table::Table;
+
 pub async fn handle_command(cli: Cli, client: AbsClient) -> Result<()> {
     match cli.command {
         Commands::Ping => {
@@ -145,26 +151,90 @@ pub async fn handle_command(cli: Cli, client: AbsClient) -> Result<()> {
         Commands::Libraries { cmd } => match cmd {
             LibraryCommands::List => {
                 let libs = client.get_libraries().await?;
-                // Parse it out using models if we want, or just pretty print json
-                // For simplicity let's pretty print the "libraries" array if it exists
-                if let Some(libraries) = libs.get("libraries") {
-                    println!("{}", serde_json::to_string_pretty(libraries)?);
-                } else {
+                if cli.json {
                     println!("{}", serde_json::to_string_pretty(&libs)?);
+                } else {
+                    let mut table = Table::new();
+                    table.set_header(vec!["ID", "Name", "Media Type"]);
+                    
+                    let libraries = if let Some(l) = libs.get("libraries") {
+                        l.as_array().cloned().unwrap_or_default()
+                    } else if libs.is_array() {
+                        libs.as_array().cloned().unwrap_or_default()
+                    } else {
+                        vec![libs]
+                    };
+
+                    for lib in libraries {
+                        table.add_row(vec![
+                            lib.get("id").and_then(|v| v.as_str()).unwrap_or("N/A"),
+                            lib.get("name").and_then(|v| v.as_str()).unwrap_or("N/A"),
+                            lib.get("mediaType").and_then(|v| v.as_str()).unwrap_or("N/A"),
+                        ]);
+                    }
+                    println!("{}", table);
                 }
             }
         },
         Commands::Users { cmd } => match cmd {
             UserCommands::List => {
-                let users = client.get_users().await?;
-                // users request returns an array directly, according to usual audiobookshelf API
-                println!("{}", serde_json::to_string_pretty(&users)?);
+                let users_resp = client.get_users().await?;
+                if cli.json {
+                    println!("{}", serde_json::to_string_pretty(&users_resp)?);
+                } else {
+                    let mut table = Table::new();
+                    table.set_header(vec!["ID", "Username", "Type", "Active"]);
+                    
+                    let users = if let Some(u) = users_resp.get("users") {
+                        u.as_array().cloned().unwrap_or_default()
+                    } else if users_resp.is_array() {
+                        users_resp.as_array().cloned().unwrap_or_default()
+                    } else {
+                        vec![users_resp]
+                    };
+
+                    for user in users {
+                        table.add_row(vec![
+                            user.get("id").and_then(|v| v.as_str()).unwrap_or("N/A"),
+                            user.get("username").and_then(|v| v.as_str()).unwrap_or("N/A"),
+                            user.get("type").and_then(|v| v.as_str()).unwrap_or("N/A"),
+                            &user.get("isActive").and_then(|v| v.as_bool()).unwrap_or(false).to_string(),
+                        ]);
+                    }
+                    println!("{}", table);
+                }
             }
         },
         Commands::Items { cmd } => match cmd {
             ItemCommands::List { library_id } => {
-                let items = client.get_library_items(&library_id).await?;
-                println!("{}", serde_json::to_string_pretty(&items)?);
+                let items_resp = client.get_library_items(&library_id).await?;
+                if cli.json {
+                    println!("{}", serde_json::to_string_pretty(&items_resp)?);
+                } else {
+                    let mut table = Table::new();
+                    table.set_header(vec!["ID", "Title", "Media Type"]);
+                    
+                    let items = if let Some(results) = items_resp.get("results") {
+                        results.as_array().cloned().unwrap_or_default()
+                    } else if items_resp.is_array() {
+                        items_resp.as_array().cloned().unwrap_or_default()
+                    } else {
+                        vec![items_resp]
+                    };
+
+                    for item in items {
+                        let title = item.get("media").and_then(|m| m.get("metadata")).and_then(|meta| meta.get("title")).and_then(|t| t.as_str())
+                            .or_else(|| item.get("media").and_then(|m| m.get("metadata")).and_then(|meta| meta.get("name")).and_then(|n| n.as_str()))
+                            .unwrap_or("N/A");
+
+                        table.add_row(vec![
+                            item.get("id").and_then(|v| v.as_str()).unwrap_or("N/A"),
+                            title,
+                            item.get("mediaType").and_then(|v| v.as_str()).unwrap_or("N/A"),
+                        ]);
+                    }
+                    println!("{}", table);
+                }
             }
             ItemCommands::Get { item_id } => {
                 let item = client.get_item(&item_id).await?;
@@ -173,8 +243,30 @@ pub async fn handle_command(cli: Cli, client: AbsClient) -> Result<()> {
         },
         Commands::Authors { cmd } => match cmd {
             AuthorCommands::List => {
-                let authors = client.get_authors().await?;
-                println!("{}", serde_json::to_string_pretty(&authors)?);
+                let authors_resp = client.get_authors().await?;
+                if cli.json {
+                    println!("{}", serde_json::to_string_pretty(&authors_resp)?);
+                } else {
+                    let mut table = Table::new();
+                    table.set_header(vec!["ID", "Name", "Books"]);
+                    
+                    let authors = if let Some(a) = authors_resp.get("authors") {
+                        a.as_array().cloned().unwrap_or_default()
+                    } else if authors_resp.is_array() {
+                        authors_resp.as_array().cloned().unwrap_or_default()
+                    } else {
+                        vec![authors_resp]
+                    };
+
+                    for author in authors {
+                        table.add_row(vec![
+                            author.get("id").and_then(|v| v.as_str()).unwrap_or("N/A"),
+                            author.get("name").and_then(|v| v.as_str()).unwrap_or("N/A"),
+                            &author.get("numBooks").and_then(|v| v.as_i64()).unwrap_or(0).to_string(),
+                        ]);
+                    }
+                    println!("{}", table);
+                }
             }
             AuthorCommands::Get { id } => {
                 let author = client.get_author(&id).await?;
@@ -183,8 +275,30 @@ pub async fn handle_command(cli: Cli, client: AbsClient) -> Result<()> {
         },
         Commands::Collections { cmd } => match cmd {
             CollectionCommands::List => {
-                let collections = client.get_collections().await?;
-                println!("{}", serde_json::to_string_pretty(&collections)?);
+                let collections_resp = client.get_collections().await?;
+                if cli.json {
+                    println!("{}", serde_json::to_string_pretty(&collections_resp)?);
+                } else {
+                    let mut table = Table::new();
+                    table.set_header(vec!["ID", "Name", "Items"]);
+                    
+                    let collections = if let Some(c) = collections_resp.get("collections") {
+                        c.as_array().cloned().unwrap_or_default()
+                    } else if collections_resp.is_array() {
+                        collections_resp.as_array().cloned().unwrap_or_default()
+                    } else {
+                        vec![collections_resp]
+                    };
+
+                    for col in collections {
+                        table.add_row(vec![
+                            col.get("id").and_then(|v| v.as_str()).unwrap_or("N/A"),
+                            col.get("name").and_then(|v| v.as_str()).unwrap_or("N/A"),
+                            &col.get("numItems").and_then(|v| v.as_i64()).unwrap_or(0).to_string(),
+                        ]);
+                    }
+                    println!("{}", table);
+                }
             }
             CollectionCommands::Get { id } => {
                 let collection = client.get_collection(&id).await?;
@@ -193,8 +307,30 @@ pub async fn handle_command(cli: Cli, client: AbsClient) -> Result<()> {
         },
         Commands::Playlists { cmd } => match cmd {
             PlaylistCommands::List => {
-                let playlists = client.get_playlists().await?;
-                println!("{}", serde_json::to_string_pretty(&playlists)?);
+                let playlists_resp = client.get_playlists().await?;
+                if cli.json {
+                    println!("{}", serde_json::to_string_pretty(&playlists_resp)?);
+                } else {
+                    let mut table = Table::new();
+                    table.set_header(vec!["ID", "Name", "Items"]);
+                    
+                    let playlists = if let Some(p) = playlists_resp.get("playlists") {
+                        p.as_array().cloned().unwrap_or_default()
+                    } else if playlists_resp.is_array() {
+                        playlists_resp.as_array().cloned().unwrap_or_default()
+                    } else {
+                        vec![playlists_resp]
+                    };
+
+                    for pl in playlists {
+                        table.add_row(vec![
+                            pl.get("id").and_then(|v| v.as_str()).unwrap_or("N/A"),
+                            pl.get("name").and_then(|v| v.as_str()).unwrap_or("N/A"),
+                            &pl.get("numItems").and_then(|v| v.as_i64()).unwrap_or(0).to_string(),
+                        ]);
+                    }
+                    println!("{}", table);
+                }
             }
             PlaylistCommands::Get { id } => {
                 let playlist = client.get_playlist(&id).await?;
@@ -203,8 +339,30 @@ pub async fn handle_command(cli: Cli, client: AbsClient) -> Result<()> {
         },
         Commands::Series { cmd } => match cmd {
             SeriesCommands::List => {
-                let series = client.get_series_list().await?;
-                println!("{}", serde_json::to_string_pretty(&series)?);
+                let series_resp = client.get_series_list().await?;
+                if cli.json {
+                    println!("{}", serde_json::to_string_pretty(&series_resp)?);
+                } else {
+                    let mut table = Table::new();
+                    table.set_header(vec!["ID", "Name", "Items"]);
+                    
+                    let series_list = if let Some(s) = series_resp.get("series") {
+                        s.as_array().cloned().unwrap_or_default()
+                    } else if series_resp.is_array() {
+                        series_resp.as_array().cloned().unwrap_or_default()
+                    } else {
+                        vec![series_resp]
+                    };
+
+                    for s in series_list {
+                        table.add_row(vec![
+                            s.get("id").and_then(|v| v.as_str()).unwrap_or("N/A"),
+                            s.get("name").and_then(|v| v.as_str()).unwrap_or("N/A"),
+                            &s.get("numBooks").and_then(|v| v.as_i64()).unwrap_or(0).to_string(),
+                        ]);
+                    }
+                    println!("{}", table);
+                }
             }
             SeriesCommands::Get { id } => {
                 let series = client.get_series(&id).await?;
@@ -213,12 +371,40 @@ pub async fn handle_command(cli: Cli, client: AbsClient) -> Result<()> {
         },
         Commands::Metadata { cmd } => match cmd {
             MetadataCommands::Tags => {
-                let tags = client.get_tags().await?;
-                println!("{}", serde_json::to_string_pretty(&tags)?);
+                let tags_resp = client.get_tags().await?;
+                if cli.json {
+                    println!("{}", serde_json::to_string_pretty(&tags_resp)?);
+                } else {
+                    let tags = tags_resp.get("tags").and_then(|t| t.as_array()).cloned().unwrap_or_default();
+                    if tags.is_empty() {
+                        println!("No tags found.");
+                    } else {
+                        let mut table = Table::new();
+                        table.set_header(vec!["Tag"]);
+                        for tag in tags {
+                            table.add_row(vec![tag.as_str().unwrap_or("N/A")]);
+                        }
+                        println!("{}", table);
+                    }
+                }
             }
             MetadataCommands::Genres => {
-                let genres = client.get_genres().await?;
-                println!("{}", serde_json::to_string_pretty(&genres)?);
+                let genres_resp = client.get_genres().await?;
+                if cli.json {
+                    println!("{}", serde_json::to_string_pretty(&genres_resp)?);
+                } else {
+                    let genres = genres_resp.get("genres").and_then(|g| g.as_array()).cloned().unwrap_or_default();
+                    if genres.is_empty() {
+                        println!("No genres found.");
+                    } else {
+                        let mut table = Table::new();
+                        table.set_header(vec!["Genre"]);
+                        for genre in genres {
+                            table.add_row(vec![genre.as_str().unwrap_or("N/A")]);
+                        }
+                        println!("{}", table);
+                    }
+                }
             }
         },
         Commands::Me => {
@@ -226,6 +412,6 @@ pub async fn handle_command(cli: Cli, client: AbsClient) -> Result<()> {
             println!("{}", serde_json::to_string_pretty(&me)?);
         }
     }
-
+    
     Ok(())
 }

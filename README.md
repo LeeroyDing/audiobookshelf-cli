@@ -1,10 +1,12 @@
-# Audiobookshelf CLI
+# Audiobookshelf CLI (abs)
 
 A powerful, asynchronous Rust-based command-line interface for interacting with your [Audiobookshelf](https://www.audiobookshelf.org/) server.
 
 ## Features
 
 - **Authenticated Access**: Securely connect using your Audiobookshelf API key.
+- **Human-Readable Tables**: Clean, formatted output for all list commands.
+- **Scripting Friendly**: Use the `--json` global flag to get raw data for automation.
 - **Cross-Platform**: Blazing fast performance on Linux, macOS, and Windows.
 - **Rich Catalog Exploration**:
   - List and view details for **Libraries**, **Authors**, **Playlists**, and **Series**.
@@ -22,7 +24,7 @@ Ensure you have [Rust](https://www.rust-lang.org/tools/install) installed, then:
 git clone https://github.com/LeeroyDing/audiobookshelf-cli.git
 cd audiobookshelf-cli
 cargo build --release
-./target/release/audiobookshelf-cli --help
+./target/release/abs --help
 ```
 
 ### 2. Configuration
@@ -41,38 +43,29 @@ AUDIOBOOKSHELF_API_KEY=your_api_key_here
 
 **Test Connection**
 ```bash
-audiobookshelf-cli ping
+abs ping
 ```
 
-**Explore Libraries**
+**Explore Libraries (Table View)**
 ```bash
-audiobookshelf-cli libraries list
+abs libraries list
+```
+
+**Get Raw JSON for Scripting**
+```bash
+abs --json libraries list | jq '.[0].id'
 ```
 
 **View Your Profile**
 ```bash
-audiobookshelf-cli me
+abs me
 ```
 
-**List Genres**
-```bash
-audiobookshelf-cli metadata genres
-```
+## Global Options
 
-## Commands
+| Option | Description |
+|--------|-------------|
+| `-j, --json` | Output raw JSON instead of tables. |
+| `-h, --help` | Show help information. |
+| `-V, --version` | Show version information. |
 
-| Command | Description |
-|---------|-------------|
-| `ping` | Verifies server reachability and credentials. |
-| `libraries list` | Lists all libraries on the server. |
-| `items list <ID>` | Lists all items in a specific library. |
-| `authors list` | Lists all authors. |
-| `playlists list` | Lists all playlists. |
-| `series list` | Lists all series. |
-| `metadata tags` | Lists all system tags. |
-| `metadata genres` | Lists all system genres. |
-| `users list` | Lists all users (requires admin permissions). |
-
-## License
-
-MIT
