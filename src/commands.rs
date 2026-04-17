@@ -1,6 +1,6 @@
-use clap::{Subcommand, Parser};
 use crate::client::AbsClient;
 use anyhow::Result;
+use clap::{Parser, Subcommand};
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -226,6 +226,6 @@ pub async fn handle_command(cli: Cli, client: AbsClient) -> Result<()> {
             println!("{}", serde_json::to_string_pretty(&me)?);
         }
     }
-    
+
     Ok(())
 }

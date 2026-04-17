@@ -1,5 +1,5 @@
-use reqwest::{Client, RequestBuilder, Method};
-use anyhow::{Result, Context};
+use anyhow::{Context, Result};
+use reqwest::{Client, Method, RequestBuilder};
 
 pub struct AbsClient {
     base_url: String,
@@ -28,7 +28,7 @@ impl AbsClient {
     // Ping endpoint doesn't strictly need auth, but using the normal builder is fine
     pub async fn ping(&self) -> Result<()> {
         let resp = self.request(Method::GET, "/ping").send().await?;
-        
+
         if resp.status().is_success() {
             Ok(())
         } else {
@@ -38,9 +38,12 @@ impl AbsClient {
 
     pub async fn get_libraries(&self) -> Result<serde_json::Value> {
         let resp = self.request(Method::GET, "/api/libraries").send().await?;
-        
+
         if resp.status().is_success() {
-            let json = resp.json::<serde_json::Value>().await.context("Failed to parse JSON")?;
+            let json = resp
+                .json::<serde_json::Value>()
+                .await
+                .context("Failed to parse JSON")?;
             Ok(json)
         } else {
             let status = resp.status();
@@ -51,9 +54,12 @@ impl AbsClient {
 
     pub async fn get_users(&self) -> Result<serde_json::Value> {
         let resp = self.request(Method::GET, "/api/users").send().await?;
-        
+
         if resp.status().is_success() {
-            let json = resp.json::<serde_json::Value>().await.context("Failed to parse JSON")?;
+            let json = resp
+                .json::<serde_json::Value>()
+                .await
+                .context("Failed to parse JSON")?;
             Ok(json)
         } else {
             let status = resp.status();
@@ -63,10 +69,16 @@ impl AbsClient {
     }
 
     pub async fn get_library_items(&self, library_id: &str) -> Result<serde_json::Value> {
-        let resp = self.request(Method::GET, &format!("/api/libraries/{}/items", library_id)).send().await?;
-        
+        let resp = self
+            .request(Method::GET, &format!("/api/libraries/{}/items", library_id))
+            .send()
+            .await?;
+
         if resp.status().is_success() {
-            let json = resp.json::<serde_json::Value>().await.context("Failed to parse JSON")?;
+            let json = resp
+                .json::<serde_json::Value>()
+                .await
+                .context("Failed to parse JSON")?;
             Ok(json)
         } else {
             let status = resp.status();
@@ -76,10 +88,16 @@ impl AbsClient {
     }
 
     pub async fn get_item(&self, item_id: &str) -> Result<serde_json::Value> {
-        let resp = self.request(Method::GET, &format!("/api/items/{}", item_id)).send().await?;
-        
+        let resp = self
+            .request(Method::GET, &format!("/api/items/{}", item_id))
+            .send()
+            .await?;
+
         if resp.status().is_success() {
-            let json = resp.json::<serde_json::Value>().await.context("Failed to parse JSON")?;
+            let json = resp
+                .json::<serde_json::Value>()
+                .await
+                .context("Failed to parse JSON")?;
             Ok(json)
         } else {
             let status = resp.status();
@@ -90,9 +108,12 @@ impl AbsClient {
 
     pub async fn get_me(&self) -> Result<serde_json::Value> {
         let resp = self.request(Method::GET, "/api/me").send().await?;
-        
+
         if resp.status().is_success() {
-            let json = resp.json::<serde_json::Value>().await.context("Failed to parse JSON")?;
+            let json = resp
+                .json::<serde_json::Value>()
+                .await
+                .context("Failed to parse JSON")?;
             Ok(json)
         } else {
             let status = resp.status();
@@ -111,7 +132,10 @@ impl AbsClient {
     }
 
     pub async fn get_author(&self, id: &str) -> Result<serde_json::Value> {
-        let resp = self.request(Method::GET, &format!("/api/authors/{}", id)).send().await?;
+        let resp = self
+            .request(Method::GET, &format!("/api/authors/{}", id))
+            .send()
+            .await?;
         if resp.status().is_success() {
             Ok(resp.json().await?)
         } else {
@@ -129,7 +153,10 @@ impl AbsClient {
     }
 
     pub async fn get_collection(&self, id: &str) -> Result<serde_json::Value> {
-        let resp = self.request(Method::GET, &format!("/api/collections/{}", id)).send().await?;
+        let resp = self
+            .request(Method::GET, &format!("/api/collections/{}", id))
+            .send()
+            .await?;
         if resp.status().is_success() {
             Ok(resp.json().await?)
         } else {
@@ -147,7 +174,10 @@ impl AbsClient {
     }
 
     pub async fn get_playlist(&self, id: &str) -> Result<serde_json::Value> {
-        let resp = self.request(Method::GET, &format!("/api/playlists/{}", id)).send().await?;
+        let resp = self
+            .request(Method::GET, &format!("/api/playlists/{}", id))
+            .send()
+            .await?;
         if resp.status().is_success() {
             Ok(resp.json().await?)
         } else {
@@ -165,7 +195,10 @@ impl AbsClient {
     }
 
     pub async fn get_series(&self, id: &str) -> Result<serde_json::Value> {
-        let resp = self.request(Method::GET, &format!("/api/series/{}", id)).send().await?;
+        let resp = self
+            .request(Method::GET, &format!("/api/series/{}", id))
+            .send()
+            .await?;
         if resp.status().is_success() {
             Ok(resp.json().await?)
         } else {
@@ -189,5 +222,61 @@ impl AbsClient {
         } else {
             anyhow::bail!("Failed to get genres: {}", resp.status())
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use mockito::Server;
+
+    #[tokio::test]
+    async fn test_ping_success() {
+        let mut server = Server::new_async().await;
+        let url = server.url();
+        let mock = server.mock("GET", "/ping").with_status(200).create();
+
+        let client = AbsClient::new(url, "fake_key".to_string());
+        let result = client.ping().await;
+
+        assert!(result.is_ok());
+        mock.assert();
+    }
+
+    #[tokio::test]
+    async fn test_get_libraries_success() {
+        let mut server = Server::new_async().await;
+        let url = server.url();
+        let mock = server
+            .mock("GET", "/api/libraries")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(r#"{"libraries": [{"id": "lib1", "name": "Books"}]}"#)
+            .create();
+
+        let client = AbsClient::new(url, "fake_key".to_string());
+        let result = client.get_libraries().await.unwrap();
+
+        assert_eq!(result["libraries"][0]["id"], "lib1");
+        mock.assert();
+    }
+
+    #[tokio::test]
+    async fn test_get_me_success() {
+        let mut server = Server::new_async().await;
+        let url = server.url();
+        let mock = server
+            .mock("GET", "/api/me")
+            .match_header("Authorization", "Bearer fake_key")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(r#"{"username": "leeroy"}"#)
+            .create();
+
+        let client = AbsClient::new(url, "fake_key".to_string());
+        let result = client.get_me().await.unwrap();
+
+        assert_eq!(result["username"], "leeroy");
+        mock.assert();
     }
 }

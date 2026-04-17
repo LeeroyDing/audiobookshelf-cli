@@ -15,11 +15,13 @@ async fn main() -> Result<()> {
 
     let cli = Cli::parse();
 
-    let server_url = env::var("AUDIOBOOKSHELF_SERVER_URL")
-        .context("AUDIOBOOKSHELF_SERVER_URL is not set. Please set it in your environment or .env file.")?;
-    
-    let api_key = env::var("AUDIOBOOKSHELF_API_KEY")
-        .context("AUDIOBOOKSHELF_API_KEY is not set. Please set it in your environment or .env file.")?;
+    let server_url = env::var("AUDIOBOOKSHELF_SERVER_URL").context(
+        "AUDIOBOOKSHELF_SERVER_URL is not set. Please set it in your environment or .env file.",
+    )?;
+
+    let api_key = env::var("AUDIOBOOKSHELF_API_KEY").context(
+        "AUDIOBOOKSHELF_API_KEY is not set. Please set it in your environment or .env file.",
+    )?;
 
     let client = AbsClient::new(server_url, api_key);
 
