@@ -48,12 +48,14 @@ async fn main() -> Result<()> {
 
     // 3. Handle Auth command early if possible (doesn't need server_url/api_key resolution)
     // Actually, it's easier to just resolve them if needed.
-    
-    let server_url = config.server_url
+
+    let server_url = config
+        .server_url
         .or_else(|| env::var("AUDIOBOOKSHELF_SERVER_URL").ok())
         .unwrap_or_default(); // We'll context check this later if needed
 
-    let mut api_key = config.api_key
+    let mut api_key = config
+        .api_key
         .or_else(|| env::var("AUDIOBOOKSHELF_API_KEY").ok());
 
     // 4. Try Keyring if still missing
@@ -66,18 +68,17 @@ async fn main() -> Result<()> {
     }
 
     // Special case: Auth commands don't strictly need a valid client setup to run login/logout
-    match &cli.command {
-        commands::Commands::Auth { .. } => {
-            let client = AbsClient::new(server_url, api_key.unwrap_or_default());
-            handle_command(cli, client).await?;
-            return Ok(());
-        }
-        _ => {}
+    if let commands::Commands::Auth { .. } = &cli.command {
+        let client = AbsClient::new(server_url, api_key.unwrap_or_default());
+        handle_command(cli, client).await?;
+        return Ok(());
     }
 
     // For all other commands, require both
     if server_url.is_empty() {
-        anyhow::bail!("Server URL not found. Set AUDIOBOOKSHELF_SERVER_URL in environment or config.yaml");
+        anyhow::bail!(
+            "Server URL not found. Set AUDIOBOOKSHELF_SERVER_URL in environment or config.yaml"
+        );
     }
     let key = api_key.context("API Key not found. Please run 'abs auth login --api-key <KEY>' or set AUDIOBOOKSHELF_API_KEY")?;
 

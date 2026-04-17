@@ -26,7 +26,11 @@ impl AbsClient {
     }
 
     /// Helper to handle responses and provide descriptive error messages
-    async fn handle_response(&self, resp: reqwest::Response, context: &str) -> Result<serde_json::Value> {
+    async fn handle_response(
+        &self,
+        resp: reqwest::Response,
+        context: &str,
+    ) -> Result<serde_json::Value> {
         let status = resp.status();
         if status.is_success() {
             let text = resp.text().await.unwrap_or_default();
@@ -39,11 +43,24 @@ impl AbsClient {
                 Err(_) => Ok(serde_json::Value::String(text)),
             }
         } else {
-            let text = resp.text().await.unwrap_or_else(|_| "No error message provided".to_string());
+            let text = resp
+                .text()
+                .await
+                .unwrap_or_else(|_| "No error message provided".to_string());
             match status.as_u16() {
-                401 | 403 => anyhow::bail!("Unauthorized: {}. Please check your AUDIOBOOKSHELF_API_KEY.", context),
-                404 => anyhow::bail!("Not Found: {}. The requested resource or endpoint does not exist.", context),
-                500..=599 => anyhow::bail!("Server Error: {}. The Audiobookshelf server returned a 5xx error: {}", context, text),
+                401 | 403 => anyhow::bail!(
+                    "Unauthorized: {}. Please check your AUDIOBOOKSHELF_API_KEY.",
+                    context
+                ),
+                404 => anyhow::bail!(
+                    "Not Found: {}. The requested resource or endpoint does not exist.",
+                    context
+                ),
+                500..=599 => anyhow::bail!(
+                    "Server Error: {}. The Audiobookshelf server returned a 5xx error: {}",
+                    context,
+                    text
+                ),
                 _ => anyhow::bail!("API Error ({}): {}. Message: {}", status, context, text),
             }
         }
@@ -55,7 +72,9 @@ impl AbsClient {
         if resp.status().is_success() {
             Ok(())
         } else {
-            self.handle_response(resp, "while pinging server").await.map(|_| ())
+            self.handle_response(resp, "while pinging server")
+                .await
+                .map(|_| ())
         }
     }
 
@@ -74,7 +93,8 @@ impl AbsClient {
             .request(Method::GET, &format!("/api/libraries/{}/items", library_id))
             .send()
             .await?;
-        self.handle_response(resp, &format!("getting items for library {}", library_id)).await
+        self.handle_response(resp, &format!("getting items for library {}", library_id))
+            .await
     }
 
     pub async fn get_item(&self, item_id: &str) -> Result<serde_json::Value> {
@@ -82,12 +102,14 @@ impl AbsClient {
             .request(Method::GET, &format!("/api/items/{}", item_id))
             .send()
             .await?;
-        self.handle_response(resp, &format!("getting item {}", item_id)).await
+        self.handle_response(resp, &format!("getting item {}", item_id))
+            .await
     }
 
     pub async fn get_me(&self) -> Result<serde_json::Value> {
         let resp = self.request(Method::GET, "/api/me").send().await?;
-        self.handle_response(resp, "getting current user info").await
+        self.handle_response(resp, "getting current user info")
+            .await
     }
 
     pub async fn get_authors(&self) -> Result<serde_json::Value> {
@@ -100,7 +122,8 @@ impl AbsClient {
             .request(Method::GET, &format!("/api/authors/{}", id))
             .send()
             .await?;
-        self.handle_response(resp, &format!("getting author {}", id)).await
+        self.handle_response(resp, &format!("getting author {}", id))
+            .await
     }
 
     pub async fn get_collections(&self) -> Result<serde_json::Value> {
@@ -113,7 +136,8 @@ impl AbsClient {
             .request(Method::GET, &format!("/api/collections/{}", id))
             .send()
             .await?;
-        self.handle_response(resp, &format!("getting collection {}", id)).await
+        self.handle_response(resp, &format!("getting collection {}", id))
+            .await
     }
 
     pub async fn get_playlists(&self) -> Result<serde_json::Value> {
@@ -126,7 +150,8 @@ impl AbsClient {
             .request(Method::GET, &format!("/api/playlists/{}", id))
             .send()
             .await?;
-        self.handle_response(resp, &format!("getting playlist {}", id)).await
+        self.handle_response(resp, &format!("getting playlist {}", id))
+            .await
     }
 
     pub async fn get_series_list(&self) -> Result<serde_json::Value> {
@@ -139,7 +164,8 @@ impl AbsClient {
             .request(Method::GET, &format!("/api/series/{}", id))
             .send()
             .await?;
-        self.handle_response(resp, &format!("getting series {}", id)).await
+        self.handle_response(resp, &format!("getting series {}", id))
+            .await
     }
 
     pub async fn get_tags(&self) -> Result<serde_json::Value> {
@@ -163,7 +189,8 @@ impl AbsClient {
             url.push_str("?force=true");
         }
         let resp = self.request(Method::POST, &url).send().await?;
-        self.handle_response(resp, &format!("scanning library {}", id)).await
+        self.handle_response(resp, &format!("scanning library {}", id))
+            .await
     }
 
     pub async fn search(&self, query: &str) -> Result<serde_json::Value> {
@@ -181,16 +208,22 @@ impl AbsClient {
         for lib in libraries {
             if let Some(id) = lib.get("id").and_then(|v| v.as_str()) {
                 let url = format!("/api/libraries/{}/search", id);
-                let resp = self.request(Method::GET, &url)
+                let resp = self
+                    .request(Method::GET, &url)
                     .query(&[("q", query)])
                     .send()
                     .await?;
-                
-                if let Ok(results) = self.handle_response(resp, &format!("searching library {}", id)).await {
+
+                if let Ok(results) = self
+                    .handle_response(resp, &format!("searching library {}", id))
+                    .await
+                {
                     if let Some(obj) = results.as_object() {
                         for (key, val) in obj {
                             if let Some(arr) = val.as_array() {
-                                let existing = aggregated.entry(key.clone()).or_insert_with(|| serde_json::Value::Array(Vec::new()));
+                                let existing = aggregated
+                                    .entry(key.clone())
+                                    .or_insert_with(|| serde_json::Value::Array(Vec::new()));
                                 if let Some(existing_arr) = existing.as_array_mut() {
                                     existing_arr.extend(arr.clone());
                                 }
@@ -204,38 +237,54 @@ impl AbsClient {
         Ok(serde_json::Value::Object(aggregated))
     }
 
-    pub async fn update_item_metadata(&self, id: &str, metadata: serde_json::Value) -> Result<serde_json::Value> {
+    pub async fn update_item_metadata(
+        &self,
+        id: &str,
+        metadata: serde_json::Value,
+    ) -> Result<serde_json::Value> {
         let url = format!("/api/items/{}/media", id);
-        let resp = self.request(Method::PATCH, &url)
+        let resp = self
+            .request(Method::PATCH, &url)
             .json(&serde_json::json!({ "metadata": metadata }))
             .send()
             .await?;
-        self.handle_response(resp, &format!("updating metadata for item {}", id)).await
+        self.handle_response(resp, &format!("updating metadata for item {}", id))
+            .await
     }
 
     pub async fn match_item(&self, id: &str) -> Result<serde_json::Value> {
         let url = format!("/api/items/{}/match", id);
         let resp = self.request(Method::POST, &url).send().await?;
-        self.handle_response(resp, &format!("matching item {}", id)).await
+        self.handle_response(resp, &format!("matching item {}", id))
+            .await
     }
 
     pub async fn unmatch_item(&self, id: &str) -> Result<serde_json::Value> {
         let url = format!("/api/items/{}/match", id);
         let resp = self.request(Method::DELETE, &url).send().await?;
-        self.handle_response(resp, &format!("unmatching item {}", id)).await
+        self.handle_response(resp, &format!("unmatching item {}", id))
+            .await
     }
 
-    pub async fn batch_update_items(&self, ids: &[String], metadata: serde_json::Value) -> Result<serde_json::Value> {
-        let payload: Vec<serde_json::Value> = ids.iter().map(|id| {
-            serde_json::json!({
-                "id": id,
-                "mediaPayload": {
-                    "metadata": metadata
-                }
+    pub async fn batch_update_items(
+        &self,
+        ids: &[String],
+        metadata: serde_json::Value,
+    ) -> Result<serde_json::Value> {
+        let payload: Vec<serde_json::Value> = ids
+            .iter()
+            .map(|id| {
+                serde_json::json!({
+                    "id": id,
+                    "mediaPayload": {
+                        "metadata": metadata
+                    }
+                })
             })
-        }).collect();
+            .collect();
 
-        let resp = self.request(Method::POST, "/api/items/batch/update")
+        let resp = self
+            .request(Method::POST, "/api/items/batch/update")
             .json(&payload)
             .send()
             .await?;

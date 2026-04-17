@@ -261,7 +261,7 @@ pub async fn handle_command(cli: Cli, client: AbsClient) -> Result<()> {
                 } else {
                     let mut table = Table::new();
                     table.set_header(vec!["ID", "Name", "Media Type"]);
-                    
+
                     let libraries = if let Some(l) = libs.get("libraries") {
                         l.as_array().cloned().unwrap_or_default()
                     } else if libs.is_array() {
@@ -274,7 +274,9 @@ pub async fn handle_command(cli: Cli, client: AbsClient) -> Result<()> {
                         table.add_row(vec![
                             lib.get("id").and_then(|v| v.as_str()).unwrap_or("N/A"),
                             lib.get("name").and_then(|v| v.as_str()).unwrap_or("N/A"),
-                            lib.get("mediaType").and_then(|v| v.as_str()).unwrap_or("N/A"),
+                            lib.get("mediaType")
+                                .and_then(|v| v.as_str())
+                                .unwrap_or("N/A"),
                         ]);
                     }
                     println!("{}", table);
@@ -294,7 +296,7 @@ pub async fn handle_command(cli: Cli, client: AbsClient) -> Result<()> {
                 } else {
                     let mut table = Table::new();
                     table.set_header(vec!["ID", "Username", "Type", "Active"]);
-                    
+
                     let users = if let Some(u) = users_resp.get("users") {
                         u.as_array().cloned().unwrap_or_default()
                     } else if users_resp.is_array() {
@@ -306,9 +308,15 @@ pub async fn handle_command(cli: Cli, client: AbsClient) -> Result<()> {
                     for user in users {
                         table.add_row(vec![
                             user.get("id").and_then(|v| v.as_str()).unwrap_or("N/A"),
-                            user.get("username").and_then(|v| v.as_str()).unwrap_or("N/A"),
+                            user.get("username")
+                                .and_then(|v| v.as_str())
+                                .unwrap_or("N/A"),
                             user.get("type").and_then(|v| v.as_str()).unwrap_or("N/A"),
-                            &user.get("isActive").and_then(|v| v.as_bool()).unwrap_or(false).to_string(),
+                            &user
+                                .get("isActive")
+                                .and_then(|v| v.as_bool())
+                                .unwrap_or(false)
+                                .to_string(),
                         ]);
                     }
                     println!("{}", table);
@@ -323,7 +331,7 @@ pub async fn handle_command(cli: Cli, client: AbsClient) -> Result<()> {
                 } else {
                     let mut table = Table::new();
                     table.set_header(vec!["ID", "Title", "Media Type"]);
-                    
+
                     let items = if let Some(results) = items_resp.get("results") {
                         results.as_array().cloned().unwrap_or_default()
                     } else if items_resp.is_array() {
@@ -333,14 +341,25 @@ pub async fn handle_command(cli: Cli, client: AbsClient) -> Result<()> {
                     };
 
                     for item in items {
-                        let title = item.get("media").and_then(|m| m.get("metadata")).and_then(|meta| meta.get("title")).and_then(|t| t.as_str())
-                            .or_else(|| item.get("media").and_then(|m| m.get("metadata")).and_then(|meta| meta.get("name")).and_then(|n| n.as_str()))
+                        let title = item
+                            .get("media")
+                            .and_then(|m| m.get("metadata"))
+                            .and_then(|meta| meta.get("title"))
+                            .and_then(|t| t.as_str())
+                            .or_else(|| {
+                                item.get("media")
+                                    .and_then(|m| m.get("metadata"))
+                                    .and_then(|meta| meta.get("name"))
+                                    .and_then(|n| n.as_str())
+                            })
                             .unwrap_or("N/A");
 
                         table.add_row(vec![
                             item.get("id").and_then(|v| v.as_str()).unwrap_or("N/A"),
                             title,
-                            item.get("mediaType").and_then(|v| v.as_str()).unwrap_or("N/A"),
+                            item.get("mediaType")
+                                .and_then(|v| v.as_str())
+                                .unwrap_or("N/A"),
                         ]);
                     }
                     println!("{}", table);
@@ -350,32 +369,53 @@ pub async fn handle_command(cli: Cli, client: AbsClient) -> Result<()> {
                 let item = client.get_item(&item_id).await?;
                 println!("{}", serde_json::to_string_pretty(&item)?);
             }
-            ItemCommands::Update { 
-                item_id, 
-                title, 
-                subtitle, 
-                author, 
-                narrator, 
-                series, 
-                genres, 
-                tags, 
-                year 
+            ItemCommands::Update {
+                item_id,
+                title,
+                subtitle,
+                author,
+                narrator,
+                series,
+                genres,
+                tags,
+                year,
             } => {
                 let mut meta = serde_json::Map::new();
-                if let Some(t) = title { meta.insert("title".to_string(), serde_json::Value::String(t)); }
-                if let Some(s) = subtitle { meta.insert("subtitle".to_string(), serde_json::Value::String(s)); }
-                if let Some(a) = author { meta.insert("authorName".to_string(), serde_json::Value::String(a)); } // Note: ABS uses authorName for simple updates usually
-                if let Some(n) = narrator { meta.insert("narratorName".to_string(), serde_json::Value::String(n)); }
-                if let Some(s) = series { meta.insert("seriesName".to_string(), serde_json::Value::String(s)); }
-                if let Some(y) = year { meta.insert("publishedYear".to_string(), serde_json::Value::Number(y.into())); }
-                
+                if let Some(t) = title {
+                    meta.insert("title".to_string(), serde_json::Value::String(t));
+                }
+                if let Some(s) = subtitle {
+                    meta.insert("subtitle".to_string(), serde_json::Value::String(s));
+                }
+                if let Some(a) = author {
+                    meta.insert("authorName".to_string(), serde_json::Value::String(a));
+                } // Note: ABS uses authorName for simple updates usually
+                if let Some(n) = narrator {
+                    meta.insert("narratorName".to_string(), serde_json::Value::String(n));
+                }
+                if let Some(s) = series {
+                    meta.insert("seriesName".to_string(), serde_json::Value::String(s));
+                }
+                if let Some(y) = year {
+                    meta.insert(
+                        "publishedYear".to_string(),
+                        serde_json::Value::Number(y.into()),
+                    );
+                }
+
                 if let Some(g_str) = genres {
-                    let g_list: Vec<serde_json::Value> = g_str.split(',').map(|s| serde_json::Value::String(s.trim().to_string())).collect();
+                    let g_list: Vec<serde_json::Value> = g_str
+                        .split(',')
+                        .map(|s| serde_json::Value::String(s.trim().to_string()))
+                        .collect();
                     meta.insert("genres".to_string(), serde_json::Value::Array(g_list));
                 }
-                
+
                 if let Some(t_str) = tags {
-                    let t_list: Vec<serde_json::Value> = t_str.split(',').map(|s| serde_json::Value::String(s.trim().to_string())).collect();
+                    let t_list: Vec<serde_json::Value> = t_str
+                        .split(',')
+                        .map(|s| serde_json::Value::String(s.trim().to_string()))
+                        .collect();
                     meta.insert("tags".to_string(), serde_json::Value::Array(t_list));
                 }
 
@@ -384,7 +424,9 @@ pub async fn handle_command(cli: Cli, client: AbsClient) -> Result<()> {
                 }
 
                 println!("Updating metadata for item {}...", item_id);
-                let result = client.update_item_metadata(&item_id, serde_json::Value::Object(meta)).await?;
+                let result = client
+                    .update_item_metadata(&item_id, serde_json::Value::Object(meta))
+                    .await?;
                 println!("Item updated successfully!");
                 if cli.json {
                     println!("{}", serde_json::to_string_pretty(&result)?);
@@ -400,34 +442,55 @@ pub async fn handle_command(cli: Cli, client: AbsClient) -> Result<()> {
                 client.unmatch_item(&item_id).await?;
                 println!("Item unmatched successfully!");
             }
-            ItemCommands::BulkUpdate { 
-                ids, 
-                title, 
-                subtitle, 
-                author, 
-                narrator, 
-                series, 
-                genres, 
-                tags, 
-                year 
+            ItemCommands::BulkUpdate {
+                ids,
+                title,
+                subtitle,
+                author,
+                narrator,
+                series,
+                genres,
+                tags,
+                year,
             } => {
                 let id_list: Vec<String> = ids.split(',').map(|s| s.trim().to_string()).collect();
-                
+
                 let mut meta = serde_json::Map::new();
-                if let Some(t) = title { meta.insert("title".to_string(), serde_json::Value::String(t)); }
-                if let Some(s) = subtitle { meta.insert("subtitle".to_string(), serde_json::Value::String(s)); }
-                if let Some(a) = author { meta.insert("authorName".to_string(), serde_json::Value::String(a)); }
-                if let Some(n) = narrator { meta.insert("narratorName".to_string(), serde_json::Value::String(n)); }
-                if let Some(s) = series { meta.insert("seriesName".to_string(), serde_json::Value::String(s)); }
-                if let Some(y) = year { meta.insert("publishedYear".to_string(), serde_json::Value::Number(y.into())); }
-                
+                if let Some(t) = title {
+                    meta.insert("title".to_string(), serde_json::Value::String(t));
+                }
+                if let Some(s) = subtitle {
+                    meta.insert("subtitle".to_string(), serde_json::Value::String(s));
+                }
+                if let Some(a) = author {
+                    meta.insert("authorName".to_string(), serde_json::Value::String(a));
+                }
+                if let Some(n) = narrator {
+                    meta.insert("narratorName".to_string(), serde_json::Value::String(n));
+                }
+                if let Some(s) = series {
+                    meta.insert("seriesName".to_string(), serde_json::Value::String(s));
+                }
+                if let Some(y) = year {
+                    meta.insert(
+                        "publishedYear".to_string(),
+                        serde_json::Value::Number(y.into()),
+                    );
+                }
+
                 if let Some(g_str) = genres {
-                    let g_list: Vec<serde_json::Value> = g_str.split(',').map(|s| serde_json::Value::String(s.trim().to_string())).collect();
+                    let g_list: Vec<serde_json::Value> = g_str
+                        .split(',')
+                        .map(|s| serde_json::Value::String(s.trim().to_string()))
+                        .collect();
                     meta.insert("genres".to_string(), serde_json::Value::Array(g_list));
                 }
-                
+
                 if let Some(t_str) = tags {
-                    let t_list: Vec<serde_json::Value> = t_str.split(',').map(|s| serde_json::Value::String(s.trim().to_string())).collect();
+                    let t_list: Vec<serde_json::Value> = t_str
+                        .split(',')
+                        .map(|s| serde_json::Value::String(s.trim().to_string()))
+                        .collect();
                     meta.insert("tags".to_string(), serde_json::Value::Array(t_list));
                 }
 
@@ -436,7 +499,9 @@ pub async fn handle_command(cli: Cli, client: AbsClient) -> Result<()> {
                 }
 
                 println!("Performing bulk update for {} items...", id_list.len());
-                let result = client.batch_update_items(&id_list, serde_json::Value::Object(meta)).await?;
+                let result = client
+                    .batch_update_items(&id_list, serde_json::Value::Object(meta))
+                    .await?;
                 println!("Bulk update completed successfully!");
                 if cli.json {
                     println!("{}", serde_json::to_string_pretty(&result)?);
@@ -451,7 +516,7 @@ pub async fn handle_command(cli: Cli, client: AbsClient) -> Result<()> {
                 } else {
                     let mut table = Table::new();
                     table.set_header(vec!["ID", "Name", "Books"]);
-                    
+
                     let authors = if let Some(a) = authors_resp.get("authors") {
                         a.as_array().cloned().unwrap_or_default()
                     } else if authors_resp.is_array() {
@@ -464,7 +529,11 @@ pub async fn handle_command(cli: Cli, client: AbsClient) -> Result<()> {
                         table.add_row(vec![
                             author.get("id").and_then(|v| v.as_str()).unwrap_or("N/A"),
                             author.get("name").and_then(|v| v.as_str()).unwrap_or("N/A"),
-                            &author.get("numBooks").and_then(|v| v.as_i64()).unwrap_or(0).to_string(),
+                            &author
+                                .get("numBooks")
+                                .and_then(|v| v.as_i64())
+                                .unwrap_or(0)
+                                .to_string(),
                         ]);
                     }
                     println!("{}", table);
@@ -483,7 +552,7 @@ pub async fn handle_command(cli: Cli, client: AbsClient) -> Result<()> {
                 } else {
                     let mut table = Table::new();
                     table.set_header(vec!["ID", "Name", "Items"]);
-                    
+
                     let collections = if let Some(c) = collections_resp.get("collections") {
                         c.as_array().cloned().unwrap_or_default()
                     } else if collections_resp.is_array() {
@@ -496,7 +565,10 @@ pub async fn handle_command(cli: Cli, client: AbsClient) -> Result<()> {
                         table.add_row(vec![
                             col.get("id").and_then(|v| v.as_str()).unwrap_or("N/A"),
                             col.get("name").and_then(|v| v.as_str()).unwrap_or("N/A"),
-                            &col.get("numItems").and_then(|v| v.as_i64()).unwrap_or(0).to_string(),
+                            &col.get("numItems")
+                                .and_then(|v| v.as_i64())
+                                .unwrap_or(0)
+                                .to_string(),
                         ]);
                     }
                     println!("{}", table);
@@ -515,7 +587,7 @@ pub async fn handle_command(cli: Cli, client: AbsClient) -> Result<()> {
                 } else {
                     let mut table = Table::new();
                     table.set_header(vec!["ID", "Name", "Items"]);
-                    
+
                     let playlists = if let Some(p) = playlists_resp.get("playlists") {
                         p.as_array().cloned().unwrap_or_default()
                     } else if playlists_resp.is_array() {
@@ -528,7 +600,10 @@ pub async fn handle_command(cli: Cli, client: AbsClient) -> Result<()> {
                         table.add_row(vec![
                             pl.get("id").and_then(|v| v.as_str()).unwrap_or("N/A"),
                             pl.get("name").and_then(|v| v.as_str()).unwrap_or("N/A"),
-                            &pl.get("numItems").and_then(|v| v.as_i64()).unwrap_or(0).to_string(),
+                            &pl.get("numItems")
+                                .and_then(|v| v.as_i64())
+                                .unwrap_or(0)
+                                .to_string(),
                         ]);
                     }
                     println!("{}", table);
@@ -547,7 +622,7 @@ pub async fn handle_command(cli: Cli, client: AbsClient) -> Result<()> {
                 } else {
                     let mut table = Table::new();
                     table.set_header(vec!["ID", "Name", "Items"]);
-                    
+
                     let series_list = if let Some(s) = series_resp.get("series") {
                         s.as_array().cloned().unwrap_or_default()
                     } else if series_resp.is_array() {
@@ -560,7 +635,10 @@ pub async fn handle_command(cli: Cli, client: AbsClient) -> Result<()> {
                         table.add_row(vec![
                             s.get("id").and_then(|v| v.as_str()).unwrap_or("N/A"),
                             s.get("name").and_then(|v| v.as_str()).unwrap_or("N/A"),
-                            &s.get("numBooks").and_then(|v| v.as_i64()).unwrap_or(0).to_string(),
+                            &s.get("numBooks")
+                                .and_then(|v| v.as_i64())
+                                .unwrap_or(0)
+                                .to_string(),
                         ]);
                     }
                     println!("{}", table);
@@ -577,7 +655,11 @@ pub async fn handle_command(cli: Cli, client: AbsClient) -> Result<()> {
                 if cli.json {
                     println!("{}", serde_json::to_string_pretty(&tags_resp)?);
                 } else {
-                    let tags = tags_resp.get("tags").and_then(|t| t.as_array()).cloned().unwrap_or_default();
+                    let tags = tags_resp
+                        .get("tags")
+                        .and_then(|t| t.as_array())
+                        .cloned()
+                        .unwrap_or_default();
                     if tags.is_empty() {
                         println!("No tags found.");
                     } else {
@@ -595,7 +677,11 @@ pub async fn handle_command(cli: Cli, client: AbsClient) -> Result<()> {
                 if cli.json {
                     println!("{}", serde_json::to_string_pretty(&genres_resp)?);
                 } else {
-                    let genres = genres_resp.get("genres").and_then(|g| g.as_array()).cloned().unwrap_or_default();
+                    let genres = genres_resp
+                        .get("genres")
+                        .and_then(|g| g.as_array())
+                        .cloned()
+                        .unwrap_or_default();
                     if genres.is_empty() {
                         println!("No genres found.");
                     } else {
@@ -620,12 +706,37 @@ pub async fn handle_command(cli: Cli, client: AbsClient) -> Result<()> {
             } else {
                 let mut table = Table::new();
                 table.set_header(vec!["Property", "Value"]);
-                
-                table.add_row(vec!["Initialized", &status.get("isInit").and_then(|v| v.as_bool()).unwrap_or(false).to_string()]);
-                table.add_row(vec!["Default Language", status.get("defaultLanguage").and_then(|v| v.as_str()).unwrap_or("N/A")]);
-                table.add_row(vec!["Config Path", status.get("configPath").and_then(|v| v.as_str()).unwrap_or("N/A")]);
-                table.add_row(vec!["Metadata Path", status.get("metadataPath").and_then(|v| v.as_str()).unwrap_or("N/A")]);
-                
+
+                table.add_row(vec![
+                    "Initialized",
+                    &status
+                        .get("isInit")
+                        .and_then(|v| v.as_bool())
+                        .unwrap_or(false)
+                        .to_string(),
+                ]);
+                table.add_row(vec![
+                    "Default Language",
+                    status
+                        .get("defaultLanguage")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("N/A"),
+                ]);
+                table.add_row(vec![
+                    "Config Path",
+                    status
+                        .get("configPath")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("N/A"),
+                ]);
+                table.add_row(vec![
+                    "Metadata Path",
+                    status
+                        .get("metadataPath")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("N/A"),
+                ]);
+
                 println!("{table}");
             }
         }
@@ -638,14 +749,28 @@ pub async fn handle_command(cli: Cli, client: AbsClient) -> Result<()> {
                 table.set_header(vec!["Type", "ID", "Name/Title"]);
 
                 // Access individual result categories
-                let categories = ["book", "podcast", "author", "series", "collection", "playlist"];
+                let categories = [
+                    "book",
+                    "podcast",
+                    "author",
+                    "series",
+                    "collection",
+                    "playlist",
+                ];
                 for cat in categories {
                     if let Some(items) = results.get(cat).and_then(|v| v.as_array()) {
                         for item in items {
-                            let name = item.get("name").and_then(|v| v.as_str())
-                                .or_else(|| item.get("media").and_then(|m| m.get("metadata")).and_then(|meta| meta.get("title")).and_then(|v| v.as_str()))
+                            let name = item
+                                .get("name")
+                                .and_then(|v| v.as_str())
+                                .or_else(|| {
+                                    item.get("media")
+                                        .and_then(|m| m.get("metadata"))
+                                        .and_then(|meta| meta.get("title"))
+                                        .and_then(|v| v.as_str())
+                                })
                                 .unwrap_or("N/A");
-                            
+
                             table.add_row(vec![
                                 cat,
                                 item.get("id").and_then(|v| v.as_str()).unwrap_or("N/A"),
@@ -654,7 +779,7 @@ pub async fn handle_command(cli: Cli, client: AbsClient) -> Result<()> {
                         }
                     }
                 }
-                
+
                 if table.is_empty() {
                     println!("No results found for '{}'", query);
                 } else {
@@ -666,13 +791,17 @@ pub async fn handle_command(cli: Cli, client: AbsClient) -> Result<()> {
             AuthCommands::Login { api_key } => {
                 let entry = keyring::Entry::new("audiobookshelf-cli", "api_key")
                     .context("Failed to access system keyring")?;
-                entry.set_password(&api_key).context("Failed to save API key to keyring")?;
+                entry
+                    .set_password(&api_key)
+                    .context("Failed to save API key to keyring")?;
                 println!("API key saved securely to system keyring.");
             }
             AuthCommands::Logout => {
                 let entry = keyring::Entry::new("audiobookshelf-cli", "api_key")
                     .context("Failed to access system keyring")?;
-                entry.delete_credential().context("Failed to remove API key from keyring (perhaps it wasn't saved?)")?;
+                entry
+                    .delete_credential()
+                    .context("Failed to remove API key from keyring (perhaps it wasn't saved?)")?;
                 println!("API key removed from system keyring.");
             }
         },
@@ -682,6 +811,6 @@ pub async fn handle_command(cli: Cli, client: AbsClient) -> Result<()> {
             clap_complete::generate(shell, &mut cmd, bin_name, &mut std::io::stdout());
         }
     }
-    
+
     Ok(())
 }
