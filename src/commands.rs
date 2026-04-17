@@ -59,12 +59,27 @@ pub enum Commands {
     },
     /// Get details about the current user
     Me,
+    /// Get server status and information
+    Info,
+    /// Search for books, authors, and series across all libraries
+    Search {
+        /// The search query
+        query: String,
+    },
 }
 
 #[derive(Subcommand)]
 pub enum LibraryCommands {
     /// List all libraries
     List,
+    /// Scan a library for new files
+    Scan {
+        /// The ID of the library to scan
+        id: String,
+        /// Force a full rescan instead of an incremental one
+        #[arg(short, long)]
+        force: bool,
+    },
 }
 
 #[derive(Subcommand)]
@@ -174,6 +189,11 @@ pub async fn handle_command(cli: Cli, client: AbsClient) -> Result<()> {
                     }
                     println!("{}", table);
                 }
+            }
+            LibraryCommands::Scan { id, force } => {
+                println!("Triggering scan for library {} (force={})...", id, force);
+                client.scan_library(&id, force).await?;
+                println!("Scan triggered successfully!");
             }
         },
         Commands::Users { cmd } => match cmd {
@@ -410,6 +430,55 @@ pub async fn handle_command(cli: Cli, client: AbsClient) -> Result<()> {
         Commands::Me => {
             let me = client.get_me().await?;
             println!("{}", serde_json::to_string_pretty(&me)?);
+        }
+        Commands::Info => {
+            let status = client.get_status().await?;
+            if cli.json {
+                println!("{}", serde_json::to_string_pretty(&status)?);
+            } else {
+                let mut table = Table::new();
+                table.set_header(vec!["Property", "Value"]);
+                
+                table.add_row(vec!["Initialized", &status.get("isInit").and_then(|v| v.as_bool()).unwrap_or(false).to_string()]);
+                table.add_row(vec!["Default Language", status.get("defaultLanguage").and_then(|v| v.as_str()).unwrap_or("N/A")]);
+                table.add_row(vec!["Config Path", status.get("configPath").and_then(|v| v.as_str()).unwrap_or("N/A")]);
+                table.add_row(vec!["Metadata Path", status.get("metadataPath").and_then(|v| v.as_str()).unwrap_or("N/A")]);
+                
+                println!("{table}");
+            }
+        }
+        Commands::Search { query } => {
+            let results = client.search(&query).await?;
+            if cli.json {
+                println!("{}", serde_json::to_string_pretty(&results)?);
+            } else {
+                let mut table = Table::new();
+                table.set_header(vec!["Type", "ID", "Name/Title"]);
+
+                // Access individual result categories
+                let categories = ["book", "podcast", "author", "series", "collection", "playlist"];
+                for cat in categories {
+                    if let Some(items) = results.get(cat).and_then(|v| v.as_array()) {
+                        for item in items {
+                            let name = item.get("name").and_then(|v| v.as_str())
+                                .or_else(|| item.get("media").and_then(|m| m.get("metadata")).and_then(|meta| meta.get("title")).and_then(|v| v.as_str()))
+                                .unwrap_or("N/A");
+                            
+                            table.add_row(vec![
+                                cat,
+                                item.get("id").and_then(|v| v.as_str()).unwrap_or("N/A"),
+                                name,
+                            ]);
+                        }
+                    }
+                }
+                
+                if table.is_empty() {
+                    println!("No results found for '{}'", query);
+                } else {
+                    println!("{table}");
+                }
+            }
         }
     }
     

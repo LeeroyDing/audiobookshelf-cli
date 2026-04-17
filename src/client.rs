@@ -29,8 +29,15 @@ impl AbsClient {
     async fn handle_response(&self, resp: reqwest::Response, context: &str) -> Result<serde_json::Value> {
         let status = resp.status();
         if status.is_success() {
-            let json = resp.json::<serde_json::Value>().await.context("Failed to parse JSON response")?;
-            Ok(json)
+            let text = resp.text().await.unwrap_or_default();
+            let trimmed = text.trim();
+            if trimmed.is_empty() || trimmed == "OK" {
+                return Ok(serde_json::Value::Null);
+            }
+            match serde_json::from_str::<serde_json::Value>(&text) {
+                Ok(json) => Ok(json),
+                Err(_) => Ok(serde_json::Value::String(text)),
+            }
         } else {
             let text = resp.text().await.unwrap_or_else(|_| "No error message provided".to_string());
             match status.as_u16() {
@@ -143,6 +150,58 @@ impl AbsClient {
     pub async fn get_genres(&self) -> Result<serde_json::Value> {
         let resp = self.request(Method::GET, "/api/genres").send().await?;
         self.handle_response(resp, "getting genres").await
+    }
+
+    pub async fn get_status(&self) -> Result<serde_json::Value> {
+        let resp = self.request(Method::GET, "/status").send().await?;
+        self.handle_response(resp, "getting server status").await
+    }
+
+    pub async fn scan_library(&self, id: &str, force: bool) -> Result<serde_json::Value> {
+        let mut url = format!("/api/libraries/{}/scan", id);
+        if force {
+            url.push_str("?force=true");
+        }
+        let resp = self.request(Method::POST, &url).send().await?;
+        self.handle_response(resp, &format!("scanning library {}", id)).await
+    }
+
+    pub async fn search(&self, query: &str) -> Result<serde_json::Value> {
+        let libs_resp = self.get_libraries().await?;
+        let libraries = if let Some(l) = libs_resp.get("libraries") {
+            l.as_array().cloned().unwrap_or_default()
+        } else if libs_resp.is_array() {
+            libs_resp.as_array().cloned().unwrap_or_default()
+        } else {
+            vec![libs_resp]
+        };
+
+        let mut aggregated = serde_json::Map::new();
+
+        for lib in libraries {
+            if let Some(id) = lib.get("id").and_then(|v| v.as_str()) {
+                let url = format!("/api/libraries/{}/search", id);
+                let resp = self.request(Method::GET, &url)
+                    .query(&[("q", query)])
+                    .send()
+                    .await?;
+                
+                if let Ok(results) = self.handle_response(resp, &format!("searching library {}", id)).await {
+                    if let Some(obj) = results.as_object() {
+                        for (key, val) in obj {
+                            if let Some(arr) = val.as_array() {
+                                let existing = aggregated.entry(key.clone()).or_insert_with(|| serde_json::Value::Array(Vec::new()));
+                                if let Some(existing_arr) = existing.as_array_mut() {
+                                    existing_arr.extend(arr.clone());
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        Ok(serde_json::Value::Object(aggregated))
     }
 }
 
