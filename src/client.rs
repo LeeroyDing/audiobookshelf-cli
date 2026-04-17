@@ -1,4 +1,4 @@
-use anyhow::{Context, Result};
+use anyhow::Result;
 use reqwest::{Client, Method, RequestBuilder};
 
 pub struct AbsClient {

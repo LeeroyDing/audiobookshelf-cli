@@ -1,6 +1,6 @@
 use crate::client::AbsClient;
-use anyhow::Result;
-use clap::{Parser, Subcommand};
+use anyhow::{Context, Result};
+use clap::{CommandFactory, Parser, Subcommand};
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -65,6 +65,16 @@ pub enum Commands {
     Search {
         /// The search query
         query: String,
+    },
+    /// Manage authentication and credentials
+    Auth {
+        #[command(subcommand)]
+        cmd: AuthCommands,
+    },
+    /// Generate shell completion scripts
+    Completion {
+        /// The shell to generate completions for
+        shell: clap_complete::Shell,
     },
 }
 
@@ -168,6 +178,18 @@ pub enum ItemCommands {
         #[arg(long)]
         year: Option<i32>,
     },
+}
+
+#[derive(Subcommand)]
+pub enum AuthCommands {
+    /// Save your API key securely in the system keyring
+    Login {
+        /// The API key to save
+        #[arg(short, long)]
+        api_key: String,
+    },
+    /// Remove your API key from the system keyring
+    Logout,
 }
 
 #[derive(Subcommand)]
@@ -639,6 +661,25 @@ pub async fn handle_command(cli: Cli, client: AbsClient) -> Result<()> {
                     println!("{table}");
                 }
             }
+        }
+        Commands::Auth { cmd } => match cmd {
+            AuthCommands::Login { api_key } => {
+                let entry = keyring::Entry::new("audiobookshelf-cli", "api_key")
+                    .context("Failed to access system keyring")?;
+                entry.set_password(&api_key).context("Failed to save API key to keyring")?;
+                println!("API key saved securely to system keyring.");
+            }
+            AuthCommands::Logout => {
+                let entry = keyring::Entry::new("audiobookshelf-cli", "api_key")
+                    .context("Failed to access system keyring")?;
+                entry.delete_credential().context("Failed to remove API key from keyring (perhaps it wasn't saved?)")?;
+                println!("API key removed from system keyring.");
+            }
+        },
+        Commands::Completion { shell } => {
+            let mut cmd = Cli::command();
+            let bin_name = cmd.get_name().to_string();
+            clap_complete::generate(shell, &mut cmd, bin_name, &mut std::io::stdout());
         }
     }
     

@@ -1,71 +1,96 @@
-# Audiobookshelf CLI (abs)
+# abs: Audiobookshelf CLI
 
 A powerful, asynchronous Rust-based command-line interface for interacting with your [Audiobookshelf](https://www.audiobookshelf.org/) server.
 
-## Features
+## 🚀 Features
 
-- **Authenticated Access**: Securely connect using your Audiobookshelf API key.
-- **Human-Readable Tables**: Clean, formatted output for all list commands.
-- **Scripting Friendly**: Use the `--json` global flag to get raw data for automation.
-- **Cross-Platform**: Blazing fast performance on Linux, macOS, and Windows.
-- **Rich Catalog Exploration**:
-  - List and view details for **Libraries**, **Authors**, **Playlists**, and **Series**.
-  - Retrieve detailed metadata for specific **Items**.
-  - List all server-wide **Tags** and **Genres**.
-- **User Management**: View your own profile and list system users.
+- **Secure Authentication**: Store your API key in the system's secure keyring.
+- **Discovery & Search**: Global search across all libraries, authors, and series.
+- **Library Management**: Trigger server-side library scans directly from your terminal.
+- **Item Management**: Update metadata, tags, and genres (including bulk operations).
+- **Human-Readable Tables**: Clean, formatted output for all list and search commands.
+- **Scripting Friendly**: Global `--json` flag for raw data output.
+- **Shell Autocompletion**: Support for Bash, Zsh, Fish, and PowerShell.
 
-## Quick Start
+## 📦 Installation
 
-### 1. Installation
+### Pre-built Binaries
+Check the [Releases](https://github.com/LeeroyDing/audiobookshelf-cli/releases) page for pre-compiled binaries for Linux, macOS, and Windows.
 
-#### From Source
-Ensure you have [Rust](https://www.rust-lang.org/tools/install) installed, then:
+### From Source
+Ensure you have [Rust](https://www.rust-lang.org/tools/install) installed:
 ```bash
 git clone https://github.com/LeeroyDing/audiobookshelf-cli.git
 cd audiobookshelf-cli
-cargo build --release
-./target/release/abs --help
+cargo install --path .
 ```
 
-### 2. Configuration
+## 🔐 Configuration & Authentication
 
-The CLI uses environment variables for authentication. Create a `.env` file in your working directory:
+`abs` supports three layers of configuration:
 
-```env
-AUDIOBOOKSHELF_SERVER_URL=https://your-abs-server.com
-AUDIOBOOKSHELF_API_KEY=your_api_key_here
-```
+1. **System Keyring (Recommended)**:
+   ```bash
+   abs auth login --api-key <YOUR_KEY>
+   ```
+2. **Environment Variables**:
+   `AUDIOBOOKSHELF_SERVER_URL` and `AUDIOBOOKSHELF_API_KEY`.
+3. **Config File**:
+   `~/.config/abs/config.yaml` on Linux/macOS.
 
-> [!TIP]
-> You can find your API key in Audiobookshelf under **Settings > Users > [Your User] > API Key**.
+## 🛠 Usage Examples
 
-### 3. Usage Examples
-
-**Test Connection**
+### Finding Content
+**Global Search**
 ```bash
-abs ping
+abs search "Sandman"
 ```
 
-**Explore Libraries (Table View)**
+**List Books in a Library**
 ```bash
-abs libraries list
+abs items list <LIBRARY_ID>
 ```
 
-**Get Raw JSON for Scripting**
+### Management
+**Update Metadata**
 ```bash
-abs --json libraries list | jq '.[0].id'
+abs items update <ITEM_ID> --tags "Sci-Fi, Space" --genres "Adventure"
 ```
 
-**View Your Profile**
+**Bulk Tagging**
+```bash
+abs items bulk-update "ID1,ID2,ID3" --tags "Read"
+```
+
+**Trigger Library Scan**
+```bash
+abs libraries scan <LIBRARY_ID>
+```
+
+### Administration
+**Server Information**
+```bash
+abs info
+```
+
+**Check Auth Status**
 ```bash
 abs me
 ```
 
-## Global Options
+## 🐚 Shell Completions
 
-| Option | Description |
-|--------|-------------|
-| `-j, --json` | Output raw JSON instead of tables. |
-| `-h, --help` | Show help information. |
-| `-V, --version` | Show version information. |
+Generate completion scripts for your shell:
+
+```bash
+# Zsh (add to ~/.zshrc)
+source <(abs completion zsh)
+
+# Bash (add to ~/.bashrc)
+source <(abs completion bash)
+```
+
+## 📜 Commands Reference
+
+Run `abs --help` or `abs <COMMAND> --help` for detailed information on every subcommand.
 
