@@ -18,7 +18,7 @@ fn test_version_command() {
     cmd.arg("--version");
     cmd.assert()
         .success()
-        .stdout(predicate::str::contains("abs 1.1.0"));
+        .stdout(predicate::str::contains("abs 1.1.1"));
 }
 
 #[test]
@@ -57,6 +57,15 @@ fn test_info_command_structure() {
     let mut cmd = Command::cargo_bin("abs").unwrap();
     cmd.arg("info").arg("--help");
     cmd.assert().success().stdout(predicate::str::contains(
-        "Get server status and information",
+        "Get server status, version, and filesystem paths",
+    ));
+}
+
+#[test]
+fn test_upload_command_exists() {
+    let mut cmd = Command::cargo_bin("abs").unwrap();
+    cmd.arg("upload").arg("--help");
+    cmd.assert().success().stdout(predicate::str::contains(
+        "Upload audiobooks or eBooks to a library",
     ));
 }
