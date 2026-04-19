@@ -6,7 +6,7 @@ on:
       - "v*"
 
 env:
-  BIN_NAME: audiobookshelf-cli
+  BIN_NAME: abs
   PROJECT_NAME: audiobookshelf-cli
 
 jobs:

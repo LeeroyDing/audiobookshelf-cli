@@ -18,7 +18,7 @@ fn test_version_command() {
     cmd.arg("--version");
     cmd.assert()
         .success()
-        .stdout(predicate::str::contains("abs 1.1.0")); 
+        .stdout(predicate::str::contains("abs 1.1.0"));
 }
 
 #[test]
