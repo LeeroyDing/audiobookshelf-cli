@@ -5,7 +5,7 @@ use clap::{CommandFactory, Parser, Subcommand};
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
 pub struct Cli {
-    /// Output raw JSON instead of tables
+    /// Output raw JSON instead of human-readable tables. Useful for scripting and AI agents.
     #[arg(short, long, global = true)]
     pub json: bool,
 
@@ -15,84 +15,84 @@ pub struct Cli {
 
 #[derive(Subcommand)]
 pub enum Commands {
-    /// Check if the server is reachable and authentication works
+    /// Check server connectivity and API key validity
     Ping,
-    /// Library-related operations
+    /// Manage libraries (list, scan)
     Libraries {
         #[command(subcommand)]
         cmd: LibraryCommands,
     },
-    /// User-related operations
+    /// Manage system users
     Users {
         #[command(subcommand)]
         cmd: UserCommands,
     },
-    /// Item-related operations
+    /// Manage library items (books, etc.)
     Items {
         #[command(subcommand)]
         cmd: ItemCommands,
     },
-    /// Author-related operations
+    /// Manage authors
     Authors {
         #[command(subcommand)]
         cmd: AuthorCommands,
     },
-    /// Collection-related operations
+    /// Manage collections
     Collections {
         #[command(subcommand)]
         cmd: CollectionCommands,
     },
-    /// Playlist-related operations
+    /// Manage playlists
     Playlists {
         #[command(subcommand)]
         cmd: PlaylistCommands,
     },
-    /// Series-related operations
+    /// Manage series
     Series {
         #[command(subcommand)]
         cmd: SeriesCommands,
     },
-    /// Metadata-related operations (tags, genres)
+    /// Explore metadata (tags, genres)
     Metadata {
         #[command(subcommand)]
         cmd: MetadataCommands,
     },
-    /// Get details about the current user
+    /// Get details about the authenticated user
     Me,
-    /// Get server status and information
+    /// Get server status, version, and filesystem paths
     Info,
-    /// Search for books, authors, and series across all libraries
+    /// Global search for books, authors, series, and more across all libraries
     Search {
-        /// The search query
+        /// The search query (e.g., "Andy Weir")
         query: String,
     },
-    /// Upload a book to a library
+    /// Upload audiobooks or eBooks to a library
     Upload {
-        /// Files to upload
+        /// Local file paths to upload
         #[arg(required = true)]
         files: Vec<std::path::PathBuf>,
-        /// The ID of the library to upload to
+        /// The UUID of the library to upload to
         #[arg(short, long)]
         library: String,
-        /// The ID of the folder within the library. If omitted, will try to auto-resolve if library has only one folder.
+        /// The UUID of the folder within the library. If omitted, will auto-resolve if the library has only one folder.
         #[arg(short, long)]
         folder: Option<String>,
         /// The title of the book
         #[arg(short, long)]
         title: String,
-        /// The author of the book
+        /// The author's name
         #[arg(short, long)]
         author: Option<String>,
         /// The series name
         #[arg(short, long)]
         series: Option<String>,
     },
-    /// Manage authentication and credentials
+    /// Manage authentication (login/logout)
     Auth {
         #[command(subcommand)]
         cmd: AuthCommands,
     },
-    /// Generate shell completion scripts
+    /// Generate shell completion scripts (Bash, Zsh, Fish, PowerShell)
     Completion {
         /// The shell to generate completions for
         shell: clap_complete::Shell,
@@ -101,11 +101,11 @@ pub enum Commands {
 
 #[derive(Subcommand)]
 pub enum LibraryCommands {
-    /// List all libraries
+    /// List all libraries on the server
     List,
-    /// Scan a library for new files
+    /// Trigger a scan for new files in a specific library
     Scan {
-        /// The ID of the library to scan
+        /// The UUID of the library to scan
         id: String,
         /// Force a full rescan instead of an incremental one
         #[arg(short, long)]
@@ -115,7 +115,7 @@ pub enum LibraryCommands {
 
 #[derive(Subcommand)]
 pub enum UserCommands {
-    /// List all system users
+    /// List all system users (requires admin permissions)
     List,
 }
 
@@ -123,17 +123,17 @@ pub enum UserCommands {
 pub enum ItemCommands {
     /// List all items in a specific library
     List {
-        /// The ID of the library
+        /// The UUID of the library
         library_id: String,
     },
-    /// Get details about a specific item
+    /// Get full metadata for a specific item (outputs JSON)
     Get {
-        /// The ID of the item
+        /// The UUID of the item
         item_id: String,
     },
     /// Update metadata for a specific item
     Update {
-        /// The ID of the item
+        /// The UUID of the item to update
         item_id: String,
         /// Update the title
         #[arg(long)]
@@ -141,61 +141,61 @@ pub enum ItemCommands {
         /// Update the subtitle
         #[arg(long)]
         subtitle: Option<String>,
-        /// Update the author(s) (comma separated)
+        /// Update author(s). Separate multiple authors with commas.
         #[arg(long)]
         author: Option<String>,
-        /// Update the narrator(s) (comma separated)
+        /// Update narrator(s). Separate multiple narrators with commas.
         #[arg(long)]
         narrator: Option<String>,
         /// Update the series name
         #[arg(long)]
         series: Option<String>,
-        /// Update the genres (comma separated)
+        /// Update genres. Separate multiple genres with commas.
         #[arg(long)]
         genres: Option<String>,
-        /// Update the tags (comma separated)
+        /// Update tags. Separate multiple tags with commas.
         #[arg(long)]
         tags: Option<String>,
         /// Update the published year
         #[arg(long)]
         year: Option<i32>,
     },
-    /// Quick match an item against metadata providers
+    /// Quick match an item against online metadata providers
     Match {
-        /// The ID of the item to match
+        /// The UUID of the item to match
         item_id: String,
     },
-    /// Remove the metadata match from an item
+    /// Remove the metadata match from an item (returns it to unmatched state)
     Unmatch {
-        /// The ID of the item to unmatch
+        /// The UUID of the item to unmatch
         item_id: String,
     },
     /// Update metadata for multiple items at once
     BulkUpdate {
-        /// The IDs of the items (comma separated)
+        /// Comma-separated list of item UUIDs (e.g., "id1,id2,id3")
         ids: String,
-        /// Update the title
+        /// Update the title for all items
         #[arg(long)]
         title: Option<String>,
-        /// Update the subtitle
+        /// Update the subtitle for all items
         #[arg(long)]
         subtitle: Option<String>,
-        /// Update the author(s) (comma separated)
+        /// Update author(s). Separate multiple authors with commas.
         #[arg(long)]
         author: Option<String>,
-        /// Update the narrator(s) (comma separated)
+        /// Update narrator(s). Separate multiple narrators with commas.
         #[arg(long)]
         narrator: Option<String>,
-        /// Update the series name
+        /// Update the series name for all items
         #[arg(long)]
         series: Option<String>,
-        /// Update the genres (comma separated)
+        /// Update genres. Separate multiple genres with commas.
         #[arg(long)]
         genres: Option<String>,
-        /// Update the tags (comma separated)
+        /// Update tags. Separate multiple tags with commas.
         #[arg(long)]
         tags: Option<String>,
-        /// Update the published year
+        /// Update the published year for all items
         #[arg(long)]
         year: Option<i32>,
     },
@@ -203,7 +203,7 @@ pub enum ItemCommands {
 
 #[derive(Subcommand)]
 pub enum AuthCommands {
-    /// Save your API key securely in the system keyring
+    /// Save your API key securely in the system keyring. Subsequent commands will use this key.
     Login {
         /// The API key to save
         #[arg(short, long)]
@@ -215,53 +215,53 @@ pub enum AuthCommands {
 
 #[derive(Subcommand)]
 pub enum AuthorCommands {
-    /// List all authors
+    /// List all authors on the server
     List,
-    /// Get details about a specific author
+    /// Get detailed information about a specific author
     Get {
-        /// The ID of the author
+        /// The UUID of the author
         id: String,
     },
 }
 
 #[derive(Subcommand)]
 pub enum CollectionCommands {
-    /// List all collections
+    /// List all collections on the server
     List,
-    /// Get details about a specific collection
+    /// Get detailed information about a specific collection
     Get {
-        /// The ID of the collection
+        /// The UUID of the collection
         id: String,
     },
 }
 
 #[derive(Subcommand)]
 pub enum PlaylistCommands {
-    /// List all playlists
+    /// List all playlists on the server
     List,
-    /// Get details about a specific playlist
+    /// Get detailed information about a specific playlist
     Get {
-        /// The ID of the playlist
+        /// The UUID of the playlist
         id: String,
     },
 }
 
 #[derive(Subcommand)]
 pub enum SeriesCommands {
-    /// List all series
+    /// List all series on the server
     List,
-    /// Get details about a specific series
+    /// Get detailed information about a specific series
     Get {
-        /// The ID of the series
+        /// The UUID of the series
         id: String,
     },
 }
 
 #[derive(Subcommand)]
 pub enum MetadataCommands {
-    /// List all tags
+    /// List all unique tags used across the server
     Tags,
-    /// List all genres
+    /// List all unique genres used across the server
     Genres,
 }
 
