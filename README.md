@@ -67,6 +67,11 @@ abs items bulk-update "ID1,ID2,ID3" --tags "Read"
 abs libraries scan <LIBRARY_ID>
 ```
 
+**Upload a Book**
+```bash
+abs upload "path/to/book.m4b" --library <LIBRARY_ID> --title "My Audiobook" --author "Author Name"
+```
+
 ### Administration
 **Server Information**
 ```bash

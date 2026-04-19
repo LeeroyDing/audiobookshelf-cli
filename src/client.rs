@@ -290,6 +290,49 @@ impl AbsClient {
             .await?;
         self.handle_response(resp, "performing batch update").await
     }
+
+    pub async fn upload(
+        &self,
+        library_id: &str,
+        folder_id: &str,
+        title: &str,
+        author: Option<String>,
+        series: Option<String>,
+        files: Vec<std::path::PathBuf>,
+    ) -> Result<serde_json::Value> {
+        let mut form = reqwest::multipart::Form::new()
+            .text("library", library_id.to_string())
+            .text("folder", folder_id.to_string())
+            .text("title", title.to_string());
+
+        if let Some(a) = author {
+            form = form.text("author", a);
+        }
+        if let Some(s) = series {
+            form = form.text("series", s);
+        }
+
+        for (i, path) in files.into_iter().enumerate() {
+            let file_name = path
+                .file_name()
+                .and_then(|n| n.to_str())
+                .unwrap_or("file")
+                .to_string();
+
+            let field_name = format!("file_{}", i);
+            let file_bytes = tokio::fs::read(&path).await?;
+            let part = reqwest::multipart::Part::bytes(file_bytes).file_name(file_name);
+            form = form.part(field_name, part);
+        }
+
+        let resp = self
+            .request(Method::POST, "/api/upload")
+            .multipart(form)
+            .send()
+            .await?;
+
+        self.handle_response(resp, "uploading book").await
+    }
 }
 
 #[cfg(test)]

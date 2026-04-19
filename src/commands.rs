@@ -66,6 +66,27 @@ pub enum Commands {
         /// The search query
         query: String,
     },
+    /// Upload a book to a library
+    Upload {
+        /// Files to upload
+        #[arg(required = true)]
+        files: Vec<std::path::PathBuf>,
+        /// The ID of the library to upload to
+        #[arg(short, long)]
+        library: String,
+        /// The ID of the folder within the library. If omitted, will try to auto-resolve if library has only one folder.
+        #[arg(short, long)]
+        folder: Option<String>,
+        /// The title of the book
+        #[arg(short, long)]
+        title: String,
+        /// The author of the book
+        #[arg(short, long)]
+        author: Option<String>,
+        /// The series name
+        #[arg(short, long)]
+        series: Option<String>,
+    },
     /// Manage authentication and credentials
     Auth {
         #[command(subcommand)]
@@ -785,6 +806,69 @@ pub async fn handle_command(cli: Cli, client: AbsClient) -> Result<()> {
                 } else {
                     println!("{table}");
                 }
+            }
+        }
+        Commands::Upload {
+            files,
+            library,
+            folder,
+            title,
+            author,
+            series,
+        } => {
+            let mut folder_id = folder;
+            if folder_id.is_none() {
+                // Try to auto-resolve
+                let libs_resp = client.get_libraries().await?;
+                let libraries = if let Some(l) = libs_resp.get("libraries") {
+                    l.as_array().cloned().unwrap_or_default()
+                } else if libs_resp.is_array() {
+                    libs_resp.as_array().cloned().unwrap_or_default()
+                } else {
+                    vec![libs_resp]
+                };
+
+                let target_lib = libraries.iter().find(|l| l["id"] == library);
+                if let Some(lib) = target_lib {
+                    if let Some(folders) = lib["folders"].as_array() {
+                        if folders.len() == 1 {
+                            folder_id = folders[0]["id"].as_str().map(|s| s.to_string());
+                            if let Some(ref fid) = folder_id {
+                                println!(
+                                    "Auto-resolved to folder: {} ({})",
+                                    folders[0]["fullPath"].as_str().unwrap_or("N/A"),
+                                    fid
+                                );
+                            }
+                        } else if folders.len() > 1 {
+                            anyhow::bail!(
+                                "Library has multiple folders. Please specify --folder ID."
+                            );
+                        } else {
+                            anyhow::bail!("Library has no folders.");
+                        }
+                    }
+                } else {
+                    anyhow::bail!("Library not found.");
+                }
+            }
+
+            let fid = folder_id.context(
+                "Folder ID is required. Use --folder or ensure library has only one folder.",
+            )?;
+
+            println!(
+                "Uploading {} file(s) to library {} (folder {})...",
+                files.len(),
+                library,
+                fid
+            );
+            let result = client
+                .upload(&library, &fid, &title, author, series, files)
+                .await?;
+            println!("Upload successful!");
+            if cli.json {
+                println!("{}", serde_json::to_string_pretty(&result)?);
             }
         }
         Commands::Auth { cmd } => match cmd {
