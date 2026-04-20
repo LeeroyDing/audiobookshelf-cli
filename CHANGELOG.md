@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+## [1.2.0] - 2026-04-20
+### Changed
+- **Rewrite in Go**: Completely rewrote the CLI from Rust to Go for improved build performance and easier maintenance.
+- **CLI Framework**: Switched to Cobra for better command management and autocompletion.
+- **Build System**: Migrated CI/CD workflows to Go-based actions.
 
 ## [1.1.1] - 2026-04-19
 

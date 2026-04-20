@@ -1,6 +1,6 @@
 # abs: Audiobookshelf CLI
 
-A powerful, asynchronous Rust-based command-line interface for interacting with your [Audiobookshelf](https://www.audiobookshelf.org/) server.
+A powerful, asynchronous Go-based command-line interface for interacting with your [Audiobookshelf](https://www.audiobookshelf.org/) server.
 
 ## 🚀 Features
 
@@ -18,11 +18,11 @@ A powerful, asynchronous Rust-based command-line interface for interacting with 
 Check the [Releases](https://github.com/LeeroyDing/audiobookshelf-cli/releases) page for pre-compiled binaries for Linux, macOS, and Windows.
 
 ### From Source
-Ensure you have [Rust](https://www.rust-lang.org/tools/install) installed:
+Ensure you have [Go](https://go.dev/doc/install) installed:
 ```bash
 git clone https://github.com/LeeroyDing/audiobookshelf-cli.git
 cd audiobookshelf-cli
-cargo install --path .
+go install .
 ```
 
 ## 🔐 Configuration & Authentication

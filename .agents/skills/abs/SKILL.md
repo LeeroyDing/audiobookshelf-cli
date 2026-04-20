@@ -4,12 +4,12 @@ description: "Commands for managing Audiobookshelf servers via the `abs` CLI. WH
 license: MIT
 metadata:
   author: Leeroy Ding
-  version: "1.0.0"
+  version: "1.2.0"
 ---
 
 # Audiobookshelf CLI (abs)
 
-The `abs` CLI is a Rust-based tool for interacting with Audiobookshelf servers.
+The `abs` CLI is a Go-based tool for interacting with Audiobookshelf servers.
 
 ## Setup & Authentication
 
