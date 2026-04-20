@@ -13,7 +13,7 @@ var (
 	jsonOutput bool
 	rootCmd    = &cobra.Command{
 		Use:     "abs",
-		Version: "1.2.0",
+		Version: "1.2.1",
 		Short:   "Audiobookshelf CLI",
 		Long:    `A powerful command-line interface for interacting with your Audiobookshelf server.`,
 	}

@@ -3,59 +3,30 @@ name: Release
 on:
   push:
     tags:
-      - "v*"
+      - 'v*'
 
-env:
-  BIN_NAME: abs
-  PROJECT_NAME: audiobookshelf-cli
+permissions:
+  contents: write
 
 jobs:
-  build-and-release:
-    name: Build and Release
-    strategy:
-      matrix:
-        include:
-          - os: ubuntu-latest
-            goos: linux
-            goarch: amd64
-            asset_name: audiobookshelf-cli-linux-amd64
-          - os: ubuntu-latest
-            goos: linux
-            goarch: arm64
-            asset_name: audiobookshelf-cli-linux-arm64
-          - os: macos-latest
-            goos: darwin
-            goarch: amd64
-            asset_name: audiobookshelf-cli-macos-amd64
-          - os: macos-latest
-            goos: darwin
-            goarch: arm64
-            asset_name: audiobookshelf-cli-macos-arm64
-          - os: windows-latest
-            goos: windows
-            goarch: amd64
-            asset_name: audiobookshelf-cli-windows-amd64.exe
-
-    runs-on: ${{ matrix.os }}
-
+  goreleaser:
+    runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.25'
-          cache: true
+          go-version: '1.22'
 
-      - name: Build
-        env:
-          GOOS: ${{ matrix.goos }}
-          GOARCH: ${{ matrix.goarch }}
-        run: go build -v -o ${{ matrix.asset_name }} main.go
-
-      - name: Upload Release Asset
-        uses: softprops/action-gh-release@v1
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v6
         with:
-          files: ${{ matrix.asset_name }}
+          distribution: goreleaser
+          version: latest
+          args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
