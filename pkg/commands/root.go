@@ -29,6 +29,25 @@ func Execute() {
 
 func init() {
 	rootCmd.PersistentFlags().BoolVarP(&jsonOutput, "json", "j", false, "Output raw JSON instead of human-readable tables")
+
+	originalHelp := rootCmd.HelpFunc()
+	rootCmd.SetHelpFunc(func(c *cobra.Command, args []string) {
+		isJson := c.Flag("json").Value.String() == "true" || jsonOutput
+		if !isJson {
+			for _, arg := range os.Args {
+				if arg == "--json" || arg == "-j" {
+					isJson = true
+					break
+				}
+			}
+		}
+
+		if isJson {
+			printJSONHelp(c)
+		} else {
+			originalHelp(c, args)
+		}
+	})
 }
 
 func getClient() (*client.AbsClient, error) {
