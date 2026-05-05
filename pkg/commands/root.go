@@ -10,10 +10,11 @@ import (
 )
 
 var (
+	Version    = "dev"
 	jsonOutput bool
 	rootCmd    = &cobra.Command{
 		Use:     "abs",
-		Version: "1.2.1",
+		Version: Version,
 		Short:   "Audiobookshelf CLI",
 		Long:    `A powerful command-line interface for interacting with your Audiobookshelf server.`,
 	}
