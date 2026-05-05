@@ -45,3 +45,12 @@ changelog:
     exclude:
       - '^docs:'
       - '^test:'
+
+brews:
+  - repository:
+      owner: LeeroyDing
+      name: homebrew-packages
+    directory: Formula
+    homepage: "https://github.com/LeeroyDing/audiobookshelf-cli"
+    description: "Command-line interface for Audiobookshelf servers"
+    license: "MIT"
